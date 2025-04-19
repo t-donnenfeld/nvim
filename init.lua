@@ -36,6 +36,18 @@ vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right win
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
+vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
+
+vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
+
+
+vim.api.nvim_create_autocmd('TextYankPost', {
+  desc = 'Highlight when yanking text',
+  group = vim.api.nvim_create_augroup('highlight-yank', { clear = true }),
+  callback = function()
+    vim.highlight.on_yank()
+  end,
+})
 
 ---- LSP CONFIGURATION -------
 
@@ -51,7 +63,7 @@ vim.api.nvim_create_autocmd('LspAttach', {
       -- Optional: trigger autocompletion on EVERY keypress. May be slow!
       -- local chars = {}; for i = 32, 126 do table.insert(chars, string.char(i)) end
       -- client.server_capabilities.completionProvider.triggerCharacters = chars
-      vim.lsp.completion.enable(true, client.id, args.buf, { autotrigger = true })
+      vim.lsp.completion.enable(true, client.id, args.buf)
     end
     -- Auto-format ("lint") on save.
     -- Usually not needed if server supports "textDocument/willSaveWaitUntil".
@@ -67,24 +79,6 @@ vim.api.nvim_create_autocmd('LspAttach', {
     end
   end,
 })
-
-vim.lsp.config['luals'] = {
-  cmd = { 'lua-language-server' },
-  filetypes = { 'lua' },
-  root_markers = { '.luarc.json', '.luarc.jsonc' },
-  settings = {
-    Lua = {
-      runtime = {
-        version = 'LuaJIT',
-      }
-    }
-  }
-}
-vim.lsp.enable('luals')
-
----- LSP CONFIGURATION -------
-
-
 
 
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
@@ -115,16 +109,11 @@ require('lazy').setup({
     config = function()
       local configs = require("nvim-treesitter.configs")
       configs.setup({
-        ensure_installed = { "c", "lua", "vim", "vimdoc", "query", "javascript", "html", "json", "yaml" },
+        ensure_installed = { "c", "lua", "vim", "vimdoc", "query", "javascript", "html", "json", "yaml", "python" },
         highlight = { enable = true },
         indent = { enable = true },
       })
     end
-  },
-  {
-    "williamboman/mason.nvim",
-    lazy = false,
-    opts = {}
   },
   {
     "nvim-neo-tree/neo-tree.nvim",
@@ -159,9 +148,42 @@ require('lazy').setup({
     opts = {}
   },
   {
+    "folke/persistence.nvim",
+    event = "BufReadPre",
+    opts = {},
+    keys = {
+      { "<leader>ss", function() require("persistence").load() end,                desc = "Restore Session" },
+      { "<leader>sS", function() require("persistence").select() end,              desc = "Select Session" },
+      { "<leader>sl", function() require("persistence").load({ last = true }) end, desc = "Restore Last Session" },
+      { "<leader>sd", function() require("persistence").stop() end,                desc = "Don't Save Current Session" },
+    },
+  },
+  {
     'windwp/nvim-autopairs',
     event = "InsertEnter",
     config = true,
     opts = {}
+  },
+  {
+    "williamboman/mason.nvim",
+    opts = {}
+  },
+  {
+    "williamboman/mason-lspconfig.nvim",
+    config = function()
+      require("mason-lspconfig").setup({
+        ensure_installed = { "eslint", "lua_ls", "pylsp", "yamlls", "ts_ls" },
+        automatic_installation = true,
+      })
+
+      require("mason-lspconfig").setup_handlers({
+        function(server_name)
+          require("lspconfig")[server_name].setup({})
+        end,
+      })
+    end,
+  },
+  {
+    'neovim/nvim-lspconfig'
   }
 })
